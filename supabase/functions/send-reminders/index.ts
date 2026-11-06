@@ -10,7 +10,16 @@ const eur = (n: number) => n.toLocaleString("es-ES", { style: "currency", curren
 const fill = (t: string, v: Record<string, string>) => t.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
 const escHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 
-Deno.serve(async () => {
+// Solo puede lanzarlo quien tenga la clave secreta del proyecto (el cron de Supabase la envía)
+const clavesValidas = (): string[] => {
+  const v = [Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""];
+  try { v.push(...Object.values(JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}") as Record<string, string>)); } catch { /* sin claves nuevas */ }
+  return v.filter(Boolean);
+};
+
+Deno.serve(async (req) => {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "") || (req.headers.get("apikey") ?? "");
+  if (!token || !clavesValidas().includes(token)) return new Response("No autorizado", { status: 401 });
   const now = Date.now();
   const desde = new Date(now + 2 * 3600e3).toISOString();   // no recordar citas que empiezan en menos de 2 h
   const hasta = new Date(now + 24 * 3600e3).toISOString();
