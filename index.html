@@ -204,52 +204,23 @@ const estadoPill = e => ({activo:'<span class="pill ok">Activo</span>',pausa:'<s
 const sesPill = s => s.estado==="realizada" ? (s.nota.temas ? '<span class="pill ok">Nota hecha</span>' : '<span class="pill warn">Falta nota</span>')
   : s.estado==="cancelada" ? '<span class="pill mute">Cancelada</span>' : '<span class="pill info">Programada</span>';
 
-// ---------- IA (capacidad "sample") ----------
-let samplePromise = (window.claude && window.claude.use) ? window.claude.use("sample").catch(()=>null) : Promise.resolve(null);
-
+// ---------- IA: resumen de sesión (función summarize-session en Supabase) ----------
 async function summarize(sid, btn){
-  const s = DB.sessions.find(x=>x.id===sid); const p = pat(s.pid);
+  const s = DB.sessions.find(x=>x.id===sid);
   const out = document.getElementById("ai-"+sid);
   readNoteForm(sid);
   if (!s.nota.temas && !s.nota.intervencion && !s.nota.observaciones){ toast("Escribe primero la nota de la sesión"); return; }
-  const sample = await samplePromise;
-  if (!sample){ out.hidden=false; out.innerHTML='<span class="label">Resumen con IA</span>El resumen con IA llegará en la próxima versión de la app.'; return; }
   btn.disabled = true; btn.textContent = "Resumiendo…";
-  out.hidden = false; out.innerHTML = '<span class="label">Resumen con IA</span><span id="ai-text-'+sid+'">Pensando…</span>';
-  const prev = DB.sessions.filter(x=>x.pid===p.id && x.estado==="realizada" && x.id!==sid && new Date(x.fecha)<new Date(s.fecha)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
-  const prompt = `Eres asistente de una psicóloga sanitaria (España) especializada en trauma y TCA. Resume la nota clínica de una sesión para la historia clínica.
-Responde en español, en texto plano, con exactamente estos apartados y nada más:
-RESUMEN (2-3 frases)
-TEMAS CLAVE (viñetas con "- ")
-INTERVENCIÓN REALIZADA (viñetas)
-EVOLUCIÓN RESPECTO A LA SESIÓN ANTERIOR (1-2 frases; si no hay sesión anterior, dilo)
-ALERTAS O RIESGOS (viñetas; si no hay, escribe "- Ninguna indicada en la nota")
-TAREAS ACORDADAS (viñetas)
-No inventes información que no esté en la nota. No hagas diagnósticos nuevos.
-
-Paciente: ${age(p.nacimiento)} años. Motivo: ${p.motivo}. Diagnóstico de trabajo: ${p.dx} ${dxLabel(p.dx)}. Riesgos registrados: ${p.riesgo||"ninguno"}.
-Fecha de la sesión: ${fmtDate(s.fecha)}. Modalidad: ${s.tipo}.
-
-NOTA DE ESTA SESIÓN
-Temas tratados: ${s.nota.temas}
-Intervención: ${s.nota.intervencion}
-Observaciones clínicas: ${s.nota.observaciones}
-Plan / tareas: ${s.nota.plan}
-
-${prev ? `NOTA DE LA SESIÓN ANTERIOR (${fmtDate(prev.fecha)})
-Temas: ${prev.nota.temas}
-Observaciones: ${prev.nota.observaciones}
-Plan: ${prev.nota.plan}` : "No hay sesión anterior registrada."}`;
+  out.hidden = false; out.innerHTML = '<span class="label">Resumen con IA</span><span id="ai-text-'+sid+'">Pensando… (unos segundos)</span>';
   try{
-    const res = await sample(prompt,{cache:false,onText:({text})=>{ const t=document.getElementById("ai-text-"+sid); if(t) t.textContent=text; }});
-    s.resumen = {texto:res.text, fecha:new Date().toISOString()}; persistSession(s);
-    const t=document.getElementById("ai-text-"+sid); if(t) t.textContent=res.text;
+    await persistSession(s); // la función lee la nota guardada
+    const { data, error } = await sb.functions.invoke("summarize-session", { body: { session_id: sid } });
+    if (error){ let m="No se pudo generar el resumen. Vuelve a intentarlo."; try{ m=(await error.context.json()).error||m; }catch(_){} throw new Error(m); }
+    s.resumen = { texto:data.texto, fecha:data.fecha };
+    out.innerHTML = '<span class="label">Resumen con IA · '+fmtDate(data.fecha)+'</span><span id="ai-text-'+sid+'">'+esc(data.texto)+'</span>';
     toast("Resumen guardado en la sesión");
   }catch(e){
-    const msg = e && e.code==="not_granted" ? "No se ha dado permiso para usar la IA en esta página." :
-                e && e.code==="rate_limited" ? "Demasiadas peticiones seguidas. Espera un minuto y vuelve a probar." :
-                "No se pudo generar el resumen. Vuelve a intentarlo.";
-    out.innerHTML = '<span class="label">Resumen con IA</span>'+esc(msg);
+    out.innerHTML = '<span class="label">Resumen con IA</span>'+esc(e.message||"No se pudo generar el resumen.");
   }finally{ btn.disabled=false; btn.textContent="Resumir con IA"; }
 }
 
