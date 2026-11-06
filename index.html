@@ -499,8 +499,15 @@ function viewAjustes(){
       <label class="field"><span>Asunto</span><input id="s-asunto" value="${esc(c.plantilla_asunto||"")}"></label>
       <label class="field"><span>Mensaje</span><textarea id="plantilla" style="min-height:130px">${esc(c.plantilla||"")}</textarea></label>
       <p class="muted" style="font-size:13px;margin:0">Puedes usar {nombre}, {fecha}, {importe} y {enlace}.</p>
-      <div><button class="primary" data-act="save-settings">Guardar ajustes</button></div>
     </div>
+    <div class="panel stack"><h2>Recordatorio de cita</h2>
+      <p style="margin:0;font-size:14px">El día antes de cada sesión, entre 2 y 24 horas antes, el paciente recibe un email de recordatorio. Si aún no ha pagado, se añade el enlace de pago.</p>
+      <label class="row" style="gap:8px;font-weight:600"><input type="checkbox" id="s-rec" ${c.recordatorio_activo!==false?"checked":""} style="width:auto"> Enviar recordatorios automáticos</label>
+      <label class="field"><span>Asunto</span><input id="s-rec-asunto" value="${esc(c.recordatorio_asunto||"")}"></label>
+      <label class="field"><span>Mensaje</span><textarea id="s-rec-texto" style="min-height:110px">${esc(c.recordatorio_plantilla||"")}</textarea></label>
+      <p class="muted" style="font-size:13px;margin:0">Puedes usar {nombre}, {fecha}, {importe} y {enlace}.</p>
+    </div>
+    <div class="panel"><button class="primary" data-act="save-settings">Guardar ajustes</button></div>
   </div>`;
 }
 
@@ -538,7 +545,7 @@ document.addEventListener("click", e=>{
   else if (a==="pay-resend") requestPayment(b.dataset.s, true);
   else if (a==="copy-link"){ const s=DB.sessions.find(x=>x.id===b.dataset.s); copyText(s.pago.url, "Enlace copiado"); }
   else if (a==="pay-done") markPaidManually(b.dataset.s);
-  else if (a==="save-settings"){ const c={nombre_consulta:$("#s-nombre").value.trim()||null,email_respuesta:$("#s-reply").value.trim()||null,plantilla_asunto:$("#s-asunto").value,plantilla:$("#plantilla").value,pago_automatico:$("#s-auto").checked};
+  else if (a==="save-settings"){ const c={nombre_consulta:$("#s-nombre").value.trim()||null,email_respuesta:$("#s-reply").value.trim()||null,plantilla_asunto:$("#s-asunto").value,plantilla:$("#plantilla").value,pago_automatico:$("#s-auto").checked,recordatorio_activo:$("#s-rec").checked,recordatorio_asunto:$("#s-rec-asunto").value,recordatorio_plantilla:$("#s-rec-texto").value};
     q(sb.from("settings").update(c).eq("owner_id",DB.settings.owner_id)).then(()=>{ Object.assign(DB.settings,c); toast("Ajustes guardados"); }); }
   else if (a==="paid"){ const i=DB.invoices.find(x=>x.id===b.dataset.i); i.pagada=true; q(sb.from("invoices").update({pagada:true}).eq("id",i.id)); render(); toast(`Factura ${i.num} cobrada`); }
 });
