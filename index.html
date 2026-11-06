@@ -162,7 +162,13 @@ const DX = [
 const ESCALAS = ["EAT-26","EDE-Q (global)","PCL-5","ITQ","GAD-7"];
 
 // ---------- datos: Supabase ----------
-const sb = supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_ANON_KEY);
+// La clave pública (anon) se toma de config.js; si no está allí, se pide una vez y se guarda en este navegador.
+function anonKey(){
+  const k = (window.CONFIG.SUPABASE_ANON_KEY||"").trim();
+  if (k.startsWith("eyJ") || k.startsWith("sb_publishable_")) return k;
+  try { return localStorage.getItem("cuaderno-anon-key"); } catch(e){ return null; }
+}
+let sb = null;
 let DB = {patients:[],sessions:[],invoices:[],settings:{}};
 async function q(p){ const {data,error} = await p; if (error){ toast("No se ha podido guardar: "+error.message); throw error; } return data; }
 const mapP = r=>({id:r.id,nombre:r.nombre,nacimiento:r.nacimiento||"",tel:r.tel||"",email:r.email||"",inicio:r.inicio,estado:r.estado,motivo:r.motivo||"",dx:r.dx||"",tarifa:+r.tarifa,escala:r.escala||"",riesgo:r.riesgo||"",medidas:[]});
@@ -544,6 +550,7 @@ function viewLogin(msg){
     <label class="field"><span>Contraseña</span><input type="password" id="l-pass" autocomplete="current-password" required></label>
     <button class="primary" type="submit">Entrar</button>
     <button type="button" class="ghost" id="l-reset">He olvidado mi contraseña</button>
+    <button type="button" class="ghost" id="l-key">Cambiar la clave de la app</button>
   </form>`;
 }
 function showLogin(msg){
@@ -551,6 +558,7 @@ function showLogin(msg){
   $("#login-form").addEventListener("submit", async e=>{ e.preventDefault();
     const {data,error} = await sb.auth.signInWithPassword({email:$("#l-email").value.trim(), password:$("#l-pass").value});
     if (error) return toast("Email o contraseña incorrectos"); enter(data.session); });
+  $("#l-key").onclick = ()=>{ try{ localStorage.removeItem("cuaderno-anon-key"); }catch(e){} showKeySetup(); };
   $("#l-reset").onclick = async ()=>{ const em=$("#l-email").value.trim(); if(!em) return toast("Escribe primero tu email");
     await sb.auth.resetPasswordForEmail(em, {redirectTo: location.origin+location.pathname}); toast("Te hemos enviado un email para cambiar la contraseña"); };
 }
@@ -575,11 +583,31 @@ let lastActive = Date.now();
 ["click","keydown","touchstart"].forEach(ev=>document.addEventListener(ev, ()=>lastActive=Date.now(), {passive:true}));
 setInterval(async ()=>{ if (!document.body.classList.contains("out") && Date.now()-lastActive > 30*60*1000){ await sb.auth.signOut(); location.reload(); } }, 60*1000);
 $("#logout").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.reload(); });
-sb.auth.onAuthStateChange((ev)=>{ if (ev==="PASSWORD_RECOVERY") $("#view").innerHTML = `<form class="panel stack login" id="np-form"><h1>Nueva contraseña</h1>
+function showKeySetup(msg){
+  document.body.classList.add("out");
+  $("#view").innerHTML = `<form class="panel stack login" id="key-form">
+    <h1>Configurar la app</h1>
+    <p style="margin:0;font-size:14px">Solo hay que hacerlo una vez en cada navegador. En Supabase, entra en <b>Project Settings → API Keys → Legacy API Keys</b>, copia la clave <b>anon public</b> y pégala aquí.</p>
+    ${msg?`<p style="margin:0;color:var(--crit)">${esc(msg)}</p>`:""}
+    <label class="field"><span>Clave anon public</span><textarea id="k-key" style="min-height:90px;font-size:12px" autocomplete="off" spellcheck="false" required></textarea></label>
+    <button class="primary" type="submit">Guardar y continuar</button>
+  </form>`;
+  $("#key-form").addEventListener("submit", e=>{ e.preventDefault();
+    const k = $("#k-key").value.replace(/\s+/g,"");
+    if (!(k.startsWith("eyJ") || k.startsWith("sb_publishable_"))) return showKeySetup("Esa no parece la clave correcta. Debe empezar por eyJ.");
+    try { localStorage.setItem("cuaderno-anon-key", k); } catch(err){}
+    start(k); });
+}
+async function start(key){
+  sb = supabase.createClient(window.CONFIG.SUPABASE_URL, key);
+  sb.auth.onAuthStateChange((ev)=>{ if (ev==="PASSWORD_RECOVERY") $("#view").innerHTML = `<form class="panel stack login" id="np-form"><h1>Nueva contraseña</h1>
   <label class="field"><span>Contraseña (mínimo 12 caracteres)</span><input type="password" id="np" minlength="12" autocomplete="new-password" required></label>
   <button class="primary" type="submit">Guardar</button></form>`, $("#np-form").addEventListener("submit", async e=>{ e.preventDefault();
     const {error} = await sb.auth.updateUser({password:$("#np").value}); toast(error?error.message:"Contraseña cambiada"); if(!error) location.reload(); }); });
-(async ()=>{ const {data:{session}} = await sb.auth.getSession(); if (session) enter(session); else showLogin(); })();
+  const {data:{session}} = await sb.auth.getSession(); if (session) enter(session); else showLogin();
+}
+const k0 = anonKey(); if (k0) start(k0); else showKeySetup();
+
 </script>
 </body>
 </html>
