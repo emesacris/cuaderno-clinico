@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Cuaderno Clínico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Literata:opsz,wght@7..72,500;7..72,600&display=swap">
+<style>
+/* Layout: barra superior con pestañas; cada vista es una columna de trabajo, la ficha se parte en datos | sesiones */
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunk:#E9EEF0; --ink:#1B2830; --muted:#5D6D76; --line:#D9E1E4;
+  --accent:#2C6B70; --accent-ink:#FFFFFF; --accent-soft:#DDECEC;
+  --ok:#2F7347; --ok-soft:#DDEFE3; --warn:#9A5A12; --warn-soft:#F6E9D6; --crit:#A8323F; --crit-soft:#F6DEE1;
+  --f-display:"Literata",Georgia,serif; --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111719; --surface:#192226; --sunk:#202B30; --ink:#E4EBEE; --muted:#93A3AB; --line:#2B373D;
+  --accent:#72B5B8; --accent-ink:#0E1C1E; --accent-soft:#1D3537;
+  --ok:#7CC492; --ok-soft:#1C3324; --warn:#E3A55C; --warn-soft:#3A2A16; --crit:#EE8592; --crit-soft:#3C1E23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111719; --surface:#192226; --sunk:#202B30; --ink:#E4EBEE; --muted:#93A3AB; --line:#2B373D;
+  --accent:#72B5B8; --accent-ink:#0E1C1E; --accent-soft:#1D3537;
+  --ok:#7CC492; --ok-soft:#1C3324; --warn:#E3A55C; --warn-soft:#3A2A16; --crit:#EE8592; --crit-soft:#3C1E23; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;font-variant-numeric:tabular-nums}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
+.brand{font-family:var(--f-display);font-weight:600;font-size:20px;letter-spacing:-.01em;margin-right:auto}
+.brand small{display:block;font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:500;letter-spacing:.02em}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--sunk);padding:4px;border-radius:999px}
+nav.tabs a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;padding:6px 14px;border-radius:999px}
+nav.tabs a[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.demo{background:var(--warn-soft);color:var(--warn);font-size:13px}
+.demo .wrap{padding-block:6px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.demo button{margin-left:auto}
+main{padding-block:24px 64px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0}
+h1{font-size:28px} h2{font-size:20px} h3{font-size:16px;font-family:var(--f-body);font-weight:700}
+.muted{color:var(--muted)}
+a{color:var(--accent)}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+.stack{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+button,.btn{font:inherit;font-weight:600;font-size:14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent;border-color:transparent;color:var(--accent);padding:4px 8px}
+button:disabled{opacity:.55;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field span{font-size:13px;font-weight:600;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)} .pill.info{background:var(--accent-soft);color:var(--accent)}
+.pill.mute{background:var(--sunk);color:var(--muted)}
+.code{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);padding:2px 7px;border-radius:6px}
+/* Resumen de hoy */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:16px 0 24px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.kpi b{display:block;font-family:var(--f-display);font-size:26px;font-weight:600}
+/* Agenda semanal */
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-height:180px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.day.today{border-color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+.day h3{font-size:13px;display:flex;justify-content:space-between}
+.appt{text-align:left;width:100%;border-radius:8px;padding:7px 9px;background:var(--accent-soft);border:1px solid transparent;color:var(--ink);font-weight:500;font-size:13px;line-height:1.3}
+.appt b{display:block;font-weight:700}
+.appt.done{background:var(--sunk);color:var(--muted)}
+.appt.cancel{background:transparent;border:1px dashed var(--line);color:var(--muted);text-decoration:line-through}
+@media (max-width:860px){.week{grid-template-columns:1fr}.day{min-height:0}}
+/* Listas */
+.list{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,2fr) auto auto;gap:12px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;border-radius:0;text-align:left;font-weight:400;width:100%}
+.item:hover{background:var(--sunk)}
+.item .name{font-weight:700}
+@media (max-width:640px){.item{grid-template-columns:minmax(0,1fr) auto}.item .hide-sm{display:none}}
+/* Ficha */
+.ficha{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.ficha{grid-template-columns:1fr}}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.spark{width:100%;height:auto;display:block}
+.session{border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.session > summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.session > summary::-webkit-details-marker{display:none}
+.session[open] > summary{border-bottom:1px solid var(--line)}
+.session .body{padding:14px;display:flex;flex-direction:column;gap:12px}
+.ai{background:var(--accent-soft);border-radius:var(--r);padding:14px;white-space:pre-wrap;font-size:14px}
+.ai .label{color:var(--accent);margin-bottom:6px;display:block}
+.note-ro{white-space:pre-wrap;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.num,th.num{text-align:right}
+.scroll{overflow-x:auto}
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(10,20,25,.45);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:max(24px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.modal{background:var(--surface);border-radius:14px;width:min(560px,100%);padding:20px;display:flex;flex-direction:column;gap:14px;border:1px solid var(--line)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:30}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{opacity:0;transform:translate(-50%,8px)}}}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body.out nav.tabs, body.out #acct{display:none}
+.login{max-width:380px;margin:8vh auto 0}
+.paybox{background:var(--sunk);border-radius:8px;padding:8px 10px}
+.paybox .muted{font-size:13px;margin-right:auto}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+</head>
+<body class="out">
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Cuaderno Clínico<small>Consulta de psicología sanitaria</small></div>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#agenda" data-tab="agenda">Agenda</a>
+      <a href="#pacientes" data-tab="pacientes">Pacientes</a>
+      <a href="#facturas" data-tab="facturas">Facturación</a>
+      <a href="#ajustes" data-tab="ajustes">Ajustes</a>
+    </nav>
+  </div>
+</header>
+<div class="demo" id="acct" style="background:var(--sunk);color:var(--muted)"><div class="wrap">
+  <span>Sesión iniciada como <b id="who"></b>. Se cerrará sola tras 30 minutos sin actividad.</span>
+  <button class="ghost" id="logout">Cerrar sesión</button>
+</div></div>
+<main class="wrap" id="view"></main>
+<div id="modal-root"></div>
+
+<script>
+// ---------- utilidades ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const DAY = 864e5;
+const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const today = startOfDay(new Date());
+const fmtDate = d => new Date(d).toLocaleDateString("es-ES",{day:"numeric",month:"short",year:"numeric"});
+const fmtDay = d => new Date(d).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"});
+const fmtTime = d => new Date(d).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+const eur = n => n.toLocaleString("es-ES",{style:"currency",currency:"EUR"});
+const isoLocal = d => { const x = new Date(d); x.setMinutes(x.getMinutes()-x.getTimezoneOffset()); return x.toISOString().slice(0,16); };
+function toast(msg){ document.querySelectorAll(".toast").forEach(x=>x.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2200); }
+
+// ---------- datos de ejemplo ----------
+const DX = [
+  ["6B80","Anorexia nerviosa"],["6B81","Bulimia nerviosa"],["6B82","Trastorno por atracón"],
+  ["6B83","Trastorno de evitación/restricción de la ingesta"],["6B40","Trastorno de estrés postraumático"],
+  ["6B41","TEPT complejo"],["6B00","Trastorno de ansiedad generalizada"],["","Sin diagnóstico (evaluación)"]
+];
+const ESCALAS = ["EAT-26","EDE-Q (global)","PCL-5","ITQ","GAD-7"];
+
+// ---------- datos: Supabase ----------
+const sb = supabase.createClient(window.CONFIG.SUPABASE_URL, window.CONFIG.SUPABASE_ANON_KEY);
+let DB = {patients:[],sessions:[],invoices:[],settings:{}};
+async function q(p){ const {data,error} = await p; if (error){ toast("No se ha podido guardar: "+error.message); throw error; } return data; }
+const mapP = r=>({id:r.id,nombre:r.nombre,nacimiento:r.nacimiento||"",tel:r.tel||"",email:r.email||"",inicio:r.inicio,estado:r.estado,motivo:r.motivo||"",dx:r.dx||"",tarifa:+r.tarifa,escala:r.escala||"",riesgo:r.riesgo||"",medidas:[]});
+const mapS = r=>({id:r.id,pid:r.patient_id,fecha:r.fecha,dur:r.dur,tipo:r.tipo,estado:r.estado,
+  nota:{temas:r.nota_temas||"",intervencion:r.nota_intervencion||"",observaciones:r.nota_observaciones||"",plan:r.nota_plan||""},
+  resumen:r.resumen?{texto:r.resumen,fecha:r.resumen_fecha}:null,factura:r.invoice_id,importe:r.importe!=null?+r.importe:null,
+  pago:r.pago_estado?{estado:r.pago_estado,url:r.pago_url,enviado:r.pago_email_enviado_at}:null});
+const mapI = r=>({id:r.id,num:r.num,pid:r.patient_id,fecha:r.fecha,concepto:r.concepto,importe:+r.importe,pagada:r.pagada});
+const sesRow = s=>({estado:s.estado,nota_temas:s.nota.temas,nota_intervencion:s.nota.intervencion,nota_observaciones:s.nota.observaciones,nota_plan:s.nota.plan,
+  resumen:s.resumen?s.resumen.texto:null,resumen_fecha:s.resumen?s.resumen.fecha:null});
+async function loadAll(){
+  const [P,M,S,I,C] = await Promise.all([q(sb.from("patients").select("*").order("nombre")),q(sb.from("measures").select("*").order("fecha")),
+    q(sb.from("sessions").select("*")),q(sb.from("invoices").select("*")),q(sb.from("settings").select("*").maybeSingle())]);
+  DB.patients = P.map(mapP);
+  M.forEach(m=>{ const p=DB.patients.find(x=>x.id===m.patient_id); if(p) p.medidas.push({id:m.id,fecha:m.fecha,v:+m.valor}); });
+  DB.sessions = S.map(mapS); DB.invoices = I.map(mapI);
+  DB.settings = C || await q(sb.from("settings").insert({}).select().single());
+}
+const persistSession = s => q(sb.from("sessions").update(sesRow(s)).eq("id",s.id));
+async function refreshSession(id){
+  const r = await q(sb.from("sessions").select("*").eq("id",id).single());
+  const i = DB.sessions.findIndex(x=>x.id===id); const nota = DB.sessions[i]?.nota;
+  DB.sessions[i] = mapS(r); if (nota) DB.sessions[i].nota = nota;
+  if (r.invoice_id && !DB.invoices.find(x=>x.id===r.invoice_id)) DB.invoices.push(mapI(await q(sb.from("invoices").select("*").eq("id",r.invoice_id).single())));
+}
+function keepDrafts(){ document.querySelectorAll('textarea[id^="n-temas-"]').forEach(t=>readNoteForm(t.id.slice(8))); }
+function copyText(text, ok){ try{ navigator.clipboard.writeText(text).then(()=>toast(ok), ()=>toast("No se pudo copiar")); }catch(e){ toast("No se pudo copiar"); } }
+
+const pat = id => DB.patients.find(p=>p.id===id);
+const age = iso => { const b=new Date(iso), n=new Date(); let a=n.getFullYear()-b.getFullYear(); if (n<new Date(n.getFullYear(),b.getMonth(),b.getDate())) a--; return a; };
+const dxLabel = c => (DX.find(d=>d[0]===c)||["",""])[1];
+const estadoPill = e => ({activo:'<span class="pill ok">Activo</span>',pausa:'<span class="pill warn">En pausa</span>',alta:'<span class="pill mute">Alta</span>'}[e]||"");
+const sesPill = s => s.estado==="realizada" ? (s.nota.temas ? '<span class="pill ok">Nota hecha</span>' : '<span class="pill warn">Falta nota</span>')
+  : s.estado==="cancelada" ? '<span class="pill mute">Cancelada</span>' : '<span class="pill info">Programada</span>';
+
+// ---------- IA (capacidad "sample") ----------
+let samplePromise = (window.claude && window.claude.use) ? window.claude.use("sample").catch(()=>null) : Promise.resolve(null);
+
+async function summarize(sid, btn){
+  const s = DB.sessions.find(x=>x.id===sid); const p = pat(s.pid);
+  const out = document.getElementById("ai-"+sid);
+  readNoteForm(sid);
+  if (!s.nota.temas && !s.nota.intervencion && !s.nota.observaciones){ toast("Escribe primero la nota de la sesión"); return; }
+  const sample = await samplePromise;
+  if (!sample){ out.hidden=false; out.innerHTML='<span class="label">Resumen con IA</span>El resumen con IA llegará en la próxima versión de la app.'; return; }
+  btn.disabled = true; btn.textContent = "Resumiendo…";
+  out.hidden = false; out.innerHTML = '<span class="label">Resumen con IA</span><span id="ai-text-'+sid+'">Pensando…</span>';
+  const prev = DB.sessions.filter(x=>x.pid===p.id && x.estado==="realizada" && x.id!==sid && new Date(x.fecha)<new Date(s.fecha)).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha))[0];
+  const prompt = `Eres asistente de una psicóloga sanitaria (España) especializada en trauma y TCA. Resume la nota clínica de una sesión para la historia clínica.
+Responde en español, en texto plano, con exactamente estos apartados y nada más:
+RESUMEN (2-3 frases)
+TEMAS CLAVE (viñetas con "- ")
+INTERVENCIÓN REALIZADA (viñetas)
+EVOLUCIÓN RESPECTO A LA SESIÓN ANTERIOR (1-2 frases; si no hay sesión anterior, dilo)
+ALERTAS O RIESGOS (viñetas; si no hay, escribe "- Ninguna indicada en la nota")
+TAREAS ACORDADAS (viñetas)
+No inventes información que no esté en la nota. No hagas diagnósticos nuevos.
+
+Paciente: ${age(p.nacimiento)} años. Motivo: ${p.motivo}. Diagnóstico de trabajo: ${p.dx} ${dxLabel(p.dx)}. Riesgos registrados: ${p.riesgo||"ninguno"}.
+Fecha de la sesión: ${fmtDate(s.fecha)}. Modalidad: ${s.tipo}.
+
+NOTA DE ESTA SESIÓN
+Temas tratados: ${s.nota.temas}
+Intervención: ${s.nota.intervencion}
+Observaciones clínicas: ${s.nota.observaciones}
+Plan / tareas: ${s.nota.plan}
+
+${prev ? `NOTA DE LA SESIÓN ANTERIOR (${fmtDate(prev.fecha)})
+Temas: ${prev.nota.temas}
+Observaciones: ${prev.nota.observaciones}
+Plan: ${prev.nota.plan}` : "No hay sesión anterior registrada."}`;
+  try{
+    const res = await sample(prompt,{cache:false,onText:({text})=>{ const t=document.getElementById("ai-text-"+sid); if(t) t.textContent=text; }});
+    s.resumen = {texto:res.text, fecha:new Date().toISOString()}; persistSession(s);
+    const t=document.getElementById("ai-text-"+sid); if(t) t.textContent=res.text;
+    toast("Resumen guardado en la sesión");
+  }catch(e){
+    const msg = e && e.code==="not_granted" ? "No se ha dado permiso para usar la IA en esta página." :
+                e && e.code==="rate_limited" ? "Demasiadas peticiones seguidas. Espera un minuto y vuelve a probar." :
+                "No se pudo generar el resumen. Vuelve a intentarlo.";
+    out.innerHTML = '<span class="label">Resumen con IA</span>'+esc(msg);
+  }finally{ btn.disabled=false; btn.textContent="Resumir con IA"; }
+}
+
+// ---------- pagos con Stripe (automáticos) ----------
+async function requestPayment(sid, reenviar=false){
+  const s = DB.sessions.find(x=>x.id===sid); const p = pat(s.pid);
+  if (!p.email){ toast("Añade el email del paciente para enviarle el enlace"); return; }
+  toast("Creando el cobro y enviando el email…");
+  const {data, error} = await sb.functions.invoke("create-payment",{body:{session_id:sid, reenviar}});
+  let msg = null;
+  if (error){ msg = error.message; try{ msg = (await error.context.json()).error || msg; }catch(e){} }
+  keepDrafts(); await refreshSession(sid); window.__openS = sid; render();
+  toast(msg ? "No se pudo enviar: "+msg : data.ya_enviado ? "El email ya se había enviado" : "Email de pago enviado a "+p.email);
+}
+function payRow(s){
+  if (s.estado==="cancelada" || (s.pago && s.pago.estado==="pagado")) return "";
+  if (!s.pago) return `<div class="row paybox"><span class="muted">Sin cobro online</span><button data-act="pay-req" data-s="${s.id}">Enviar enlace de pago</button><button class="ghost" data-act="pay-done" data-s="${s.id}">Marcar como pagada</button></div>`;
+  return `<div class="row paybox"><span class="muted">${s.pago.estado==="fallido"?"El último intento de pago falló":s.pago.enviado?"Email enviado el "+fmtDate(s.pago.enviado)+". Esperando el pago.":"El email no se llegó a enviar."}</span>
+    <button data-act="pay-resend" data-s="${s.id}">Reenviar email</button>
+    ${s.pago.url?`<button class="ghost" data-act="copy-link" data-s="${s.id}">Copiar enlace</button>`:""}
+    <button class="ghost" data-act="pay-done" data-s="${s.id}">Marcar como pagada</button></div>`;
+}
+async function markPaidManually(sid){
+  const s = DB.sessions.find(x=>x.id===sid);
+  await q(sb.from("sessions").update({pago_estado:"pagado",pagado_at:new Date().toISOString()}).eq("id",sid));
+  if (!s.factura) await invoiceSession(sid, true);
+  else await q(sb.from("invoices").update({pagada:true}).eq("id",s.factura));
+  keepDrafts(); await refreshSession(sid); const inv = DB.invoices.find(i=>i.id===s.factura); if (inv) inv.pagada = true;
+  window.__openS = sid; render(); toast("Pago registrado y factura marcada como cobrada");
+}
+
+// ---------- modal ----------
+function modal(html, onSubmit){
+  const root = $("#modal-root");
+  root.innerHTML = `<div class="overlay"><form class="modal" id="mform">${html}
+    <div class="row" style="justify-content:flex-end"><button type="button" id="mcancel">Cancelar</button><button class="primary" type="submit">Guardar</button></div></form></div>`;
+  const close = () => root.innerHTML = "";
+  $("#mcancel").onclick = close;
+  root.querySelector(".overlay").addEventListener("click", e=>{ if(e.target.classList.contains("overlay")) close(); });
+  $("#mform").addEventListener("submit", e=>{ e.preventDefault(); const fd = Object.fromEntries(new FormData(e.target)); if (onSubmit(fd)!==false) close(); });
+  const first = root.querySelector("input,select,textarea"); if (first) first.focus();
+}
+const patientOptions = sel => DB.patients.filter(p=>p.estado!=="alta").map(p=>`<option value="${p.id}" ${p.id===sel?"selected":""}>${esc(p.nombre)}</option>`).join("");
+
+function newAppt(pid, when){
+  const d = when ? new Date(when) : new Date(today.getTime()+DAY); if (!when) d.setHours(10,0,0,0);
+  modal(`<h2>Nueva cita</h2>
+    <label class="field"><span>Paciente</span><select name="pid" id="f-pid" required>${patientOptions(pid)}</select></label>
+    <div class="grid2"><label class="field"><span>Fecha y hora</span><input type="datetime-local" name="fecha" id="f-fecha" value="${isoLocal(d)}" required></label>
+    <label class="field"><span>Modalidad</span><select name="tipo" id="f-tipo"><option>Presencial</option><option>Online</option></select></label></div>
+    <label class="field"><span>Duración (min)</span><input type="number" name="dur" id="f-dur" value="50" min="15" step="5"></label>
+    <label class="row" style="gap:8px;font-weight:600"><input type="checkbox" name="pago" id="f-pago" ${DB.settings.pago_automatico?"checked":""} style="width:auto"> Enviar al paciente un email con el enlace de pago</label>`,
+  fd=>{ (async()=>{
+    const p = pat(fd.pid);
+    const r = await q(sb.from("sessions").insert({patient_id:fd.pid,fecha:new Date(fd.fecha).toISOString(),dur:+fd.dur||50,tipo:fd.tipo,importe:p.tarifa}).select().single());
+    DB.sessions.push(mapS(r)); render(); toast("Cita guardada");
+    if (fd.pago) await requestPayment(r.id);
+  })(); });
+}
+
+function editPatient(id){
+  const p = id ? pat(id) : {nombre:"",nacimiento:"",tel:"",email:"",motivo:"",dx:"",tarifa:60,estado:"activo",escala:"",riesgo:""};
+  modal(`<h2>${id?"Editar paciente":"Nuevo paciente"}</h2>
+    <label class="field"><span>Nombre y apellidos</span><input name="nombre" id="f-nombre" value="${esc(p.nombre)}" required></label>
+    <div class="grid2">
+      <label class="field"><span>Fecha de nacimiento</span><input type="date" name="nacimiento" id="f-nac" value="${esc(p.nacimiento)}" required></label>
+      <label class="field"><span>Teléfono</span><input name="tel" id="f-tel" value="${esc(p.tel)}"></label>
+      <label class="field"><span>Email</span><input type="email" name="email" id="f-email" value="${esc(p.email)}"></label>
+      <label class="field"><span>Tarifa por sesión (€)</span><input type="number" name="tarifa" id="f-tarifa" value="${p.tarifa}" min="0"></label>
+    </div>
+    <label class="field"><span>Motivo de consulta</span><textarea name="motivo" id="f-motivo">${esc(p.motivo)}</textarea></label>
+    <div class="grid2">
+      <label class="field"><span>Diagnóstico de trabajo (CIE-11)</span><select name="dx" id="f-dx">${DX.map(d=>`<option value="${d[0]}" ${d[0]===p.dx?"selected":""}>${d[0]?d[0]+" · ":""}${d[1]}</option>`).join("")}</select></label>
+      <label class="field"><span>Escala de seguimiento</span><select name="escala" id="f-escala"><option value="">Ninguna</option>${ESCALAS.map(e=>`<option ${e===p.escala?"selected":""}>${e}</option>`).join("")}</select></label>
+      <label class="field"><span>Estado</span><select name="estado" id="f-estado">${[["activo","Activo"],["pausa","En pausa"],["alta","Alta"]].map(([v,l])=>`<option value="${v}" ${v===p.estado?"selected":""}>${l}</option>`).join("")}</select></label>
+    </div>
+    <label class="field"><span>Riesgos y avisos</span><textarea name="riesgo" id="f-riesgo">${esc(p.riesgo)}</textarea></label>`,
+  fd=>{
+    fd.tarifa = +fd.tarifa||0;
+    const row = {...fd, nacimiento: fd.nacimiento||null};
+    (async()=>{
+      if (id){ await q(sb.from("patients").update(row).eq("id",id)); Object.assign(p, fd); render(); toast("Ficha actualizada"); }
+      else { const r = await q(sb.from("patients").insert(row).select().single()); DB.patients.push(mapP(r)); location.hash="p-"+r.id; render(); toast("Paciente creado"); }
+    })();
+  });
+}
+
+function addMeasure(pid){
+  const p = pat(pid);
+  modal(`<h2>Nueva puntuación ${esc(p.escala)}</h2>
+    <div class="grid2"><label class="field"><span>Fecha</span><input type="date" name="fecha" id="f-mfecha" value="${isoLocal(today).slice(0,10)}" required></label>
+    <label class="field"><span>Puntuación</span><input type="number" step="0.1" name="v" id="f-mv" required></label></div>`,
+  fd=>{ (async()=>{ const r = await q(sb.from("measures").insert({patient_id:pid,fecha:fd.fecha,valor:+fd.v}).select().single());
+    p.medidas.push({id:r.id,fecha:r.fecha,v:+r.valor}); p.medidas.sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)); render(); toast("Puntuación añadida"); })(); });
+}
+
+async function invoiceSession(sid, pagada=false){
+  const s = DB.sessions.find(x=>x.id===sid); const p = pat(s.pid);
+  const num = await q(sb.rpc("my_next_invoice_num"));
+  const r = await q(sb.from("invoices").insert({patient_id:p.id,session_id:s.id,num,concepto:`Sesión de psicoterapia (${fmtDate(s.fecha)})`,importe:s.importe??p.tarifa,pagada}).select().single());
+  DB.invoices.push(mapI(r)); s.factura = r.id;
+  await q(sb.from("sessions").update({invoice_id:r.id}).eq("id",s.id));
+  if (!pagada){ render(); toast(`Factura ${num} creada`); }
+  return r;
+}
+
+function readNoteForm(sid){
+  const s = DB.sessions.find(x=>x.id===sid);
+  ["temas","intervencion","observaciones","plan"].forEach(k=>{ const el=document.getElementById(`n-${k}-${sid}`); if(el) s.nota[k]=el.value; });
+}
+
+// ---------- vistas ----------
+function viewAgenda(){
+  const off = window.__weekOff || 0;
+  const monday = new Date(today.getTime() - ((today.getDay()+6)%7)*DAY + off*7*DAY);
+  const days = [...Array(7)].map((_,i)=>new Date(monday.getTime()+i*DAY));
+  const todays = DB.sessions.filter(s=>startOfDay(s.fecha).getTime()===today.getTime() && s.estado!=="cancelada");
+  const pendNotes = DB.sessions.filter(s=>s.estado==="realizada" && !s.nota.temas).length;
+  const pastProg = DB.sessions.filter(s=>s.estado==="programada" && new Date(s.fecha)<new Date()).length;
+  const unbilled = DB.sessions.filter(s=>s.estado==="realizada" && !s.factura).length;
+  const unpaid = DB.invoices.filter(i=>!i.pagada).reduce((a,i)=>a+i.importe,0);
+  return `<div class="row spread"><div><span class="label">${new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</span><h1>Agenda</h1></div>
+    <button class="primary" data-act="new-appt">Nueva cita</button></div>
+  <div class="kpis">
+    <div class="kpi"><span class="label">Sesiones hoy</span><b>${todays.length}</b><span class="muted">${todays.map(s=>fmtTime(s.fecha)).join(" · ")||"Día libre"}</span></div>
+    <div class="kpi"><span class="label">Por cerrar</span><b>${pastProg}</b><span class="muted">citas pasadas sin marcar</span></div>
+    <div class="kpi"><span class="label">Sin facturar</span><b>${unbilled}</b><span class="muted">sesiones realizadas</span></div>
+    <div class="kpi"><span class="label">Pendiente de cobro</span><b>${eur(unpaid)}</b><span class="muted">${DB.invoices.filter(i=>!i.pagada).length} facturas</span></div>
+  </div>
+  <div class="row spread" style="margin-bottom:12px">
+    <h2>Semana del ${fmtDay(days[0])} al ${fmtDay(days[6])}</h2>
+    <div class="row"><button data-act="week" data-d="-1" aria-label="Semana anterior">←</button><button data-act="week" data-d="0">Hoy</button><button data-act="week" data-d="1" aria-label="Semana siguiente">→</button></div>
+  </div>
+  <div class="week">${days.map(d=>{
+    const list = DB.sessions.filter(s=>startOfDay(s.fecha).getTime()===d.getTime()).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+    return `<div class="day ${d.getTime()===today.getTime()?"today":""}"><h3><span>${d.toLocaleDateString("es-ES",{weekday:"short"})}</span><span class="muted">${d.getDate()}</span></h3>
+      ${list.map(s=>{const p=pat(s.pid); return `<button class="appt ${s.estado==="realizada"?"done":s.estado==="cancelada"?"cancel":""}" data-act="open-p" data-id="${s.pid}" data-s="${s.id}">
+        <b>${fmtTime(s.fecha)}</b>${esc(p?p.nombre.split(" ").slice(0,2).join(" "):"")}<br><span class="muted">${s.tipo}</span></button>`;}).join("")||'<span class="muted" style="font-size:13px">Sin citas</span>'}
+    </div>`;}).join("")}</div>`;
+}
+
+function viewPacientes(){
+  const q = (window.__q||"").toLowerCase(); const f = window.__f||"activo";
+  const list = DB.patients.filter(p=>(f==="todos"||p.estado===f) && (p.nombre.toLowerCase().includes(q)||dxLabel(p.dx).toLowerCase().includes(q)));
+  return `<div class="row spread"><h1>Pacientes</h1><button class="primary" data-act="new-p">Nuevo paciente</button></div>
+  <div class="row" style="margin:16px 0">
+    <input id="q" placeholder="Buscar por nombre o diagnóstico" value="${esc(window.__q||"")}" style="max-width:340px">
+    <nav class="tabs">${[["activo","Activos"],["pausa","En pausa"],["alta","Alta"],["todos","Todos"]].map(([v,l])=>`<a href="#pacientes" data-act="filter" data-f="${v}" ${v===f?'aria-current="page"':""}>${l}</a>`).join("")}</nav>
+  </div>
+  <div class="panel" style="padding:4px 14px"><div class="list">${list.map(p=>{
+    const next = DB.sessions.filter(s=>s.pid===p.id && s.estado==="programada" && new Date(s.fecha)>=new Date()).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha))[0];
+    return `<button class="item" data-act="open-p" data-id="${p.id}">
+      <span><span class="name">${esc(p.nombre)}</span><br><span class="muted">${age(p.nacimiento)} años${p.riesgo?' · <span style="color:var(--crit)">con avisos</span>':""}</span></span>
+      <span class="hide-sm">${p.dx?`<span class="code">${p.dx}</span> `:""}${esc(dxLabel(p.dx))}</span>
+      <span class="hide-sm muted">${next?"Próxima: "+fmtDay(next.fecha):"Sin cita"}</span>
+      ${estadoPill(p.estado)}</button>`;}).join("")||'<p class="muted">No hay pacientes con ese filtro.</p>'}</div></div>`;
+}
+
+function spark(p){
+  const m = p.medidas; if (m.length<2) return '<p class="muted" style="font-size:13px">Añade al menos dos puntuaciones para ver la evolución.</p>';
+  const W=300,H=90,pad=14; const vs=m.map(x=>x.v); const max=Math.max(...vs), min=Math.min(...vs); const span=(max-min)||1;
+  const t0=new Date(m[0].fecha), t1=new Date(m[m.length-1].fecha), ts=(t1-t0)||1;
+  const pts=m.map(x=>[pad+(new Date(x.fecha)-t0)/ts*(W-2*pad), pad+(max-x.v)/span*(H-2*pad)]);
+  const line=pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
+  const area=line+` L${pts[pts.length-1][0].toFixed(1)} ${H-pad} L${pts[0][0].toFixed(1)} ${H-pad} Z`;
+  const last=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución ${esc(p.escala)}">
+    <line x1="${pad}" x2="${W-pad}" y1="${H-pad}" y2="${H-pad}" stroke="var(--line)"/>
+    <path d="${area}" fill="var(--accent-soft)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+    ${pts.map(q=>`<circle cx="${q[0]}" cy="${q[1]}" r="2.5" fill="var(--accent)"/>`).join("")}
+    <circle cx="${last[0]}" cy="${last[1]}" r="5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+  </svg>
+  <div class="row spread" style="font-size:13px"><span class="muted">${fmtDate(m[0].fecha)}: <b style="color:var(--ink)">${m[0].v}</b></span><span class="muted">${fmtDate(m[m.length-1].fecha)}: <b style="color:var(--ink)">${m[m.length-1].v}</b></span></div>`;
+}
+
+function viewFicha(id, openSid){
+  const p = pat(id); if (!p) return `<p>Paciente no encontrado. <a href="#pacientes">Volver</a></p>`;
+  const ses = DB.sessions.filter(s=>s.pid===id).sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const done = ses.filter(s=>s.estado==="realizada").length;
+  return `<a href="#pacientes" class="btn ghost" style="display:inline-block;text-decoration:none;margin-bottom:8px">← Pacientes</a>
+  <div class="row spread" style="margin-bottom:16px"><div><div class="row"><h1>${esc(p.nombre)}</h1>${estadoPill(p.estado)}</div>
+    <span class="muted">${age(p.nacimiento)} años · en terapia desde ${fmtDate(p.inicio)} · ${done} sesiones realizadas</span></div>
+    <div class="row"><button data-act="edit-p" data-id="${p.id}">Editar ficha</button><button class="primary" data-act="new-appt" data-id="${p.id}">Nueva cita</button></div></div>
+  <div class="ficha">
+    <div class="stack">
+      <div class="panel stack">
+        <div><span class="label">Diagnóstico de trabajo</span><div style="margin-top:4px">${p.dx?`<span class="code">${p.dx}</span> `:""}${esc(dxLabel(p.dx))}</div></div>
+        <div><span class="label">Motivo de consulta</span><p style="margin:4px 0 0">${esc(p.motivo)}</p></div>
+        ${p.riesgo?`<div style="background:var(--crit-soft);color:var(--crit);border-radius:8px;padding:10px 12px;font-size:14px"><b>Avisos:</b> ${esc(p.riesgo)}</div>`:""}
+        <dl class="kv"><dt>Teléfono</dt><dd>${esc(p.tel)}</dd><dt>Email</dt><dd>${esc(p.email)}</dd><dt>Nacimiento</dt><dd>${fmtDate(p.nacimiento)}</dd><dt>Tarifa</dt><dd>${eur(p.tarifa)} / sesión</dd></dl>
+      </div>
+      ${p.escala?`<div class="panel stack"><div class="row spread"><span class="label">${esc(p.escala)}</span><button class="ghost" data-act="measure" data-id="${p.id}">+ Puntuación</button></div>${spark(p)}</div>`:""}
+    </div>
+    <div class="stack">
+      <h2>Sesiones</h2>
+      ${ses.map(s=>`<details class="session" ${s.id===openSid?"open":""} id="s-${s.id}">
+        <summary><b>${fmtDay(s.fecha)}, ${fmtTime(s.fecha)}</b><span class="muted">${s.tipo} · ${s.dur} min</span>${sesPill(s)}${s.pago?(s.pago.estado==="pagado"?'<span class="pill ok">Pagada</span>':s.pago.estado==="fallido"?'<span class="pill crit">Pago fallido</span>':'<span class="pill warn">Pago pendiente</span>'):""}${s.factura?'<span class="pill mute">Facturada</span>':""}${s.resumen?'<span class="pill info">Resumen IA</span>':""}</summary>
+        <div class="body">
+          ${payRow(s)}
+          ${s.estado==="programada"?`<div class="row"><button data-act="mark" data-s="${s.id}" data-e="realizada">Marcar como realizada</button><button data-act="mark" data-s="${s.id}" data-e="cancelada">Cancelar cita</button></div>`:""}
+          ${s.estado==="realizada"?`
+            ${["temas|Temas tratados","intervencion|Intervención","observaciones|Observaciones clínicas","plan|Plan y tareas"].map(x=>{const [k,l]=x.split("|");return `<label class="field"><span>${l}</span><textarea id="n-${k}-${s.id}">${esc(s.nota[k])}</textarea></label>`;}).join("")}
+            <div class="row"><button class="primary" data-act="save-note" data-s="${s.id}">Guardar nota</button><button data-act="ai" data-s="${s.id}">Resumir con IA</button>
+              ${!s.factura?`<button class="ghost" data-act="invoice" data-s="${s.id}">Facturar ${eur(p.tarifa)}</button>`:""}</div>
+            <div class="ai" id="ai-${s.id}" ${s.resumen?"":"hidden"}><span class="label">Resumen con IA${s.resumen?" · "+fmtDate(s.resumen.fecha):""}</span><span id="ai-text-${s.id}">${s.resumen?esc(s.resumen.texto):""}</span></div>`:""}
+          ${s.estado==="cancelada"?'<p class="muted" style="margin:0">Cita cancelada.</p>':""}
+        </div></details>`).join("")||'<p class="muted">Todavía no hay sesiones. Crea la primera cita.</p>'}
+    </div>
+  </div>`;
+}
+
+function viewFacturas(){
+  const m = new Date().getMonth(), y = new Date().getFullYear();
+  const mes = DB.invoices.filter(i=>{const d=new Date(i.fecha);return d.getMonth()===m&&d.getFullYear()===y;});
+  const unbilled = DB.sessions.filter(s=>s.estado==="realizada"&&!s.factura).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const inv = [...DB.invoices].sort((a,b)=>b.num.localeCompare(a.num));
+  return `<h1>Facturación</h1>
+  <div class="kpis">
+    <div class="kpi"><span class="label">Facturado este mes</span><b>${eur(mes.reduce((a,i)=>a+i.importe,0))}</b><span class="muted">${mes.length} facturas</span></div>
+    <div class="kpi"><span class="label">Cobrado</span><b>${eur(DB.invoices.filter(i=>i.pagada).reduce((a,i)=>a+i.importe,0))}</b></div>
+    <div class="kpi"><span class="label">Pendiente de cobro</span><b>${eur(DB.invoices.filter(i=>!i.pagada).reduce((a,i)=>a+i.importe,0))}</b></div>
+  </div>
+  ${unbilled.length?`<div class="panel stack" style="margin-bottom:16px"><h2>Sesiones sin facturar</h2><div class="list">${unbilled.map(s=>{const p=pat(s.pid);return `<div class="row spread" style="padding:8px 0;border-bottom:1px solid var(--line)"><span><b>${esc(p.nombre)}</b> <span class="muted">· ${fmtDay(s.fecha)}</span></span><button data-act="invoice" data-s="${s.id}">Facturar ${eur(p.tarifa)}</button></div>`;}).join("")}</div></div>`:""}
+  <div class="panel"><h2 style="margin-bottom:8px">Facturas emitidas</h2>
+  <p class="muted" style="margin:0 0 10px;font-size:13px">Exentas de IVA por el art. 20.Uno.3º de la Ley 37/1992 (asistencia sanitaria). Sin retención de IRPF para pacientes particulares.</p>
+  <div class="scroll"><table><thead><tr><th>Nº</th><th>Fecha</th><th>Paciente</th><th>Concepto</th><th class="num">Importe</th><th>Estado</th><th></th></tr></thead><tbody>
+  ${inv.map(i=>`<tr><td>${i.num}</td><td>${fmtDate(i.fecha)}</td><td>${esc(pat(i.pid)?.nombre||"")}</td><td>${esc(i.concepto)}</td><td class="num">${eur(i.importe)}</td>
+    <td>${i.pagada?'<span class="pill ok">Cobrada</span>':'<span class="pill warn">Pendiente</span>'}</td>
+    <td>${i.pagada?"":`<button class="ghost" data-act="paid" data-i="${i.id}">Marcar cobrada</button>`}</td></tr>`).join("")}
+  </tbody></table></div></div>`;
+}
+
+function viewAjustes(){
+  const c = DB.settings;
+  return `<h1>Ajustes</h1>
+  <div class="ficha" style="margin-top:16px">
+    <div class="panel stack"><h2>Cobro automático</h2>
+      <p style="margin:0;font-size:14px">Al crear una cita, la app genera en Stripe un enlace de pago por el importe de la tarifa del paciente y se lo envía por email. Cuando paga, la sesión pasa a <b>Pagada</b> y se crea la factura cobrada.</p>
+      <p class="muted" style="font-size:13px;margin:0">El email solo incluye fecha, importe y enlace, nunca datos clínicos. Comisión de Stripe con tarjetas europeas: 1,5 % + 0,25 € por pago.</p>
+      <label class="row" style="gap:8px;font-weight:600"><input type="checkbox" id="s-auto" ${c.pago_automatico?"checked":""} style="width:auto"> Marcar "enviar enlace de pago" por defecto en cada cita nueva</label>
+    </div>
+    <div class="panel stack"><h2>Email al paciente</h2>
+      <div class="grid2">
+        <label class="field"><span>Nombre de la consulta (remitente)</span><input id="s-nombre" value="${esc(c.nombre_consulta||"")}"></label>
+        <label class="field"><span>Email para respuestas</span><input id="s-reply" type="email" value="${esc(c.email_respuesta||"")}"></label>
+      </div>
+      <label class="field"><span>Asunto</span><input id="s-asunto" value="${esc(c.plantilla_asunto||"")}"></label>
+      <label class="field"><span>Mensaje</span><textarea id="plantilla" style="min-height:130px">${esc(c.plantilla||"")}</textarea></label>
+      <p class="muted" style="font-size:13px;margin:0">Puedes usar {nombre}, {fecha}, {importe} y {enlace}.</p>
+      <div><button class="primary" data-act="save-settings">Guardar ajustes</button></div>
+    </div>
+  </div>`;
+}
+
+// ---------- router y eventos ----------
+function render(){
+  const h = location.hash.slice(1) || "agenda";
+  const tab = h.startsWith("p-") ? "pacientes" : h;
+  document.querySelectorAll("nav.tabs a[data-tab]").forEach(a=>{ if(a.dataset.tab===tab) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  const v = $("#view");
+  if (h.startsWith("p-")) v.innerHTML = viewFicha(h.slice(2), window.__openS);
+  else if (h==="pacientes") v.innerHTML = viewPacientes();
+  else if (h==="facturas") v.innerHTML = viewFacturas();
+  else if (h==="ajustes") v.innerHTML = viewAjustes();
+  else v.innerHTML = viewAgenda();
+  const q = $("#q"); if (q) q.addEventListener("input", e=>{ window.__q=e.target.value; const pos=e.target.selectionStart; render(); const n=$("#q"); n.focus(); n.setSelectionRange(pos,pos); });
+  if (window.__openS){ const el=document.getElementById("s-"+window.__openS); if(el) el.scrollIntoView({block:"start"}); window.__openS=null; }
+}
+window.addEventListener("hashchange", ()=>{ render(); window.scrollTo(0,0); });
+
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const a = b.dataset.act;
+  if (a==="new-appt") newAppt(b.dataset.id);
+  else if (a==="new-p") editPatient();
+  else if (a==="edit-p") editPatient(b.dataset.id);
+  else if (a==="measure") addMeasure(b.dataset.id);
+  else if (a==="week"){ const d=+b.dataset.d; window.__weekOff = d===0?0:(window.__weekOff||0)+d; render(); }
+  else if (a==="filter"){ e.preventDefault(); window.__f=b.dataset.f; render(); }
+  else if (a==="open-p"){ window.__openS=b.dataset.s||null; if (location.hash==="#p-"+b.dataset.id) render(); else location.hash="p-"+b.dataset.id; }
+  else if (a==="mark"){ const s=DB.sessions.find(x=>x.id===b.dataset.s); s.estado=b.dataset.e; persistSession(s); window.__openS=s.id; render(); toast(s.estado==="realizada"?"Sesión realizada. Escribe la nota.":"Cita cancelada"); }
+  else if (a==="save-note"){ readNoteForm(b.dataset.s); persistSession(DB.sessions.find(x=>x.id===b.dataset.s)); window.__openS=b.dataset.s; render(); toast("Nota guardada"); }
+  else if (a==="ai") summarize(b.dataset.s, b);
+  else if (a==="invoice"){ const sid=b.dataset.s; if(location.hash.startsWith("#p-")) { readNoteForm(sid); window.__openS=sid; } invoiceSession(sid); }
+  else if (a==="pay-req") requestPayment(b.dataset.s);
+  else if (a==="pay-resend") requestPayment(b.dataset.s, true);
+  else if (a==="copy-link"){ const s=DB.sessions.find(x=>x.id===b.dataset.s); copyText(s.pago.url, "Enlace copiado"); }
+  else if (a==="pay-done") markPaidManually(b.dataset.s);
+  else if (a==="save-settings"){ const c={nombre_consulta:$("#s-nombre").value.trim()||null,email_respuesta:$("#s-reply").value.trim()||null,plantilla_asunto:$("#s-asunto").value,plantilla:$("#plantilla").value,pago_automatico:$("#s-auto").checked};
+    q(sb.from("settings").update(c).eq("owner_id",DB.settings.owner_id)).then(()=>{ Object.assign(DB.settings,c); toast("Ajustes guardados"); }); }
+  else if (a==="paid"){ const i=DB.invoices.find(x=>x.id===b.dataset.i); i.pagada=true; q(sb.from("invoices").update({pagada:true}).eq("id",i.id)); render(); toast(`Factura ${i.num} cobrada`); }
+});
+function viewLogin(msg){
+  return `<form class="panel stack login" id="login-form">
+    <h1>Entrar</h1>
+    ${msg?`<p style="margin:0;color:var(--muted)">${esc(msg)}</p>`:""}
+    <label class="field"><span>Email</span><input type="email" id="l-email" autocomplete="username" required></label>
+    <label class="field"><span>Contraseña</span><input type="password" id="l-pass" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">Entrar</button>
+    <button type="button" class="ghost" id="l-reset">He olvidado mi contraseña</button>
+  </form>`;
+}
+function showLogin(msg){
+  document.body.classList.add("out"); $("#view").innerHTML = viewLogin(msg);
+  $("#login-form").addEventListener("submit", async e=>{ e.preventDefault();
+    const {data,error} = await sb.auth.signInWithPassword({email:$("#l-email").value.trim(), password:$("#l-pass").value});
+    if (error) return toast("Email o contraseña incorrectos"); enter(data.session); });
+  $("#l-reset").onclick = async ()=>{ const em=$("#l-email").value.trim(); if(!em) return toast("Escribe primero tu email");
+    await sb.auth.resetPasswordForEmail(em, {redirectTo: location.origin+location.pathname}); toast("Te hemos enviado un email para cambiar la contraseña"); };
+}
+let channel = null;
+async function enter(session){
+  document.body.classList.remove("out"); $("#who").textContent = session.user.email;
+  $("#view").innerHTML = '<p class="muted">Cargando…</p>';
+  await loadAll(); render();
+  channel = sb.channel("cambios").on("postgres_changes",{event:"UPDATE",schema:"public",table:"sessions"}, async ev=>{
+    const old = DB.sessions.find(x=>x.id===ev.new.id);
+    if (!old || (old.pago?.estado===ev.new.pago_estado && old.factura===ev.new.invoice_id)) return;
+    keepDrafts(); await refreshSession(ev.new.id);
+    if (!document.querySelector(".overlay")) render();
+    if (ev.new.pago_estado==="pagado") toast(`${pat(ev.new.patient_id)?.nombre.split(" ")[0]||"Un paciente"} ha pagado su sesión`);
+  }).on("postgres_changes",{event:"*",schema:"public",table:"invoices"}, ev=>{
+    if (!ev.new?.id) return; const i = DB.invoices.findIndex(x=>x.id===ev.new.id);
+    if (i>=0) DB.invoices[i] = mapI(ev.new); else DB.invoices.push(mapI(ev.new));
+  }).subscribe();
+}
+// Cierre de sesión tras 30 minutos sin actividad (datos clínicos)
+let lastActive = Date.now();
+["click","keydown","touchstart"].forEach(ev=>document.addEventListener(ev, ()=>lastActive=Date.now(), {passive:true}));
+setInterval(async ()=>{ if (!document.body.classList.contains("out") && Date.now()-lastActive > 30*60*1000){ await sb.auth.signOut(); location.reload(); } }, 60*1000);
+$("#logout").addEventListener("click", async ()=>{ await sb.auth.signOut(); location.reload(); });
+sb.auth.onAuthStateChange((ev)=>{ if (ev==="PASSWORD_RECOVERY") $("#view").innerHTML = `<form class="panel stack login" id="np-form"><h1>Nueva contraseña</h1>
+  <label class="field"><span>Contraseña (mínimo 12 caracteres)</span><input type="password" id="np" minlength="12" autocomplete="new-password" required></label>
+  <button class="primary" type="submit">Guardar</button></form>`, $("#np-form").addEventListener("submit", async e=>{ e.preventDefault();
+    const {error} = await sb.auth.updateUser({password:$("#np").value}); toast(error?error.message:"Contraseña cambiada"); if(!error) location.reload(); }); });
+(async ()=>{ const {data:{session}} = await sb.auth.getSession(); if (session) enter(session); else showLogin(); })();
+</script>
+</body>
+</html>
